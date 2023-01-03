@@ -136,6 +136,7 @@ public interface StatementControl {
 		return cs.getTimestamp(index);
 	}
 
+	@SuppressWarnings("unused")
 	default Object getColumn(ResultSet rs, ArgumentType type, String name) throws Exception {
 		switch (type) {
 			case VARCHAR:
