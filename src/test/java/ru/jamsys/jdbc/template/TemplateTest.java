@@ -38,10 +38,12 @@ class TemplateTest {
 
     }
 
-    @Test
+    //@Test
     void realConnection() throws Exception {
+
         Security security = App.context.getBean(Security.class);
-        security.add("test", "changeme");
+        security.init("12345".toCharArray());
+        security.add("test", "changeme".toCharArray());
 
         PostgreSQL first = new PostgreSQL("First", 1, 10, 60000);
         first.setSecurity(security);

@@ -23,7 +23,7 @@ public class JdbcTemplate extends AbstractCoreComponent {
     final String nameSchedulerStabilizer = "SchedulerJdbcStabilizer";
     private final Scheduler scheduler;
     private final StatisticAggregator statisticAggregator;
-    private final Map<String, Pool> mapPool = new ConcurrentHashMap<>();
+    private final Map<String, Pool<Connection>> mapPool = new ConcurrentHashMap<>();
     private final Map<String, Template> mapTemplate = new ConcurrentHashMap<>();
 
     public JdbcTemplate(StatisticAggregator statisticAggregator, Scheduler scheduler) {
@@ -33,11 +33,11 @@ public class JdbcTemplate extends AbstractCoreComponent {
         scheduler.add(SchedulerGlobal.SCHEDULER_GLOBAL_STATISTIC_WRITE, this::flushStatistic);
     }
 
-    public void addPool(Pool pool) {
+    public void addPool(Pool<Connection> pool) {
         mapPool.put(pool.getName(), pool);
     }
 
-    public Pool getPool(String name) {
+    public Pool<Connection> getPool(String name) {
         return mapPool.get(name);
     }
 
@@ -50,9 +50,17 @@ public class JdbcTemplate extends AbstractCoreComponent {
     }
 
     public List<Map<String, Object>> exec(String namePool, String nameTemplate, Map<String, Object> args) throws Exception {
-        Pool pool = getPool(namePool);
+        Pool<Connection> pool = getPool(namePool);
         Template template = getTemplate(nameTemplate);
-        return Template.execute((Connection) pool.getResource(), template, args, ((PoolJdbc) pool).getStatementControl());
+        Connection res = pool.getResource();
+        List<Map<String, Object>> execute = null;
+        try {
+            execute = Template.execute(res, template, args, ((PoolJdbc) pool).getStatementControl());
+            pool.complete(res, null);
+        } catch (Exception e) {
+            pool.complete(res, e);
+        }
+        return execute;
     }
 
     @Override
@@ -60,7 +68,7 @@ public class JdbcTemplate extends AbstractCoreComponent {
         String[] strings = mapPool.keySet().toArray(new String[0]);
         PoolAggregateStatisticData aggStat = new PoolAggregateStatisticData();
         for (String name : strings) {
-            Pool threadBalancer = mapPool.get(name);
+            Pool<Connection> threadBalancer = mapPool.get(name);
             if (threadBalancer != null) {
                 PoolStatisticData thStat = threadBalancer.flushStatistic();
                 if (thStat != null) {
@@ -74,7 +82,7 @@ public class JdbcTemplate extends AbstractCoreComponent {
     private void stabilizer() {
         String[] strings = mapPool.keySet().toArray(new String[0]);
         for (String name : strings) {
-            Pool pool = mapPool.get(name);
+            Pool<Connection> pool = mapPool.get(name);
             if (pool != null) {
                 pool.stabilizer();
             }
