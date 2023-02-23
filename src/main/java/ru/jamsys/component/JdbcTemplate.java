@@ -13,6 +13,7 @@ import ru.jamsys.pool.PoolStatisticData;
 import ru.jamsys.scheduler.SchedulerGlobal;
 
 import java.sql.Connection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,11 @@ public class JdbcTemplate extends AbstractCoreComponent {
     @SuppressWarnings("unused")
     public void addPool(Pool<Connection> pool) {
         mapPool.put(pool.getName(), pool);
+    }
+
+    @SuppressWarnings("unused")
+    public Map<String, Object> createArguments(){
+        return new HashMap<>();
     }
 
     public List<Map<String, Object>> exec(String namePool, TemplateEnum templateEnum, Map<String, Object> args, boolean debug) throws Exception {
