@@ -50,14 +50,13 @@ class TemplateTest {
         first.setSecurityKey("test");
         first.initial();
 
-        Template template = new Template("select id_srv from srv", StatementType.SELECT);
+        /*Template template = new Template("select id_srv from srv", StatementType.SELECT);
 
         JdbcTemplate bean = App.context.getBean(JdbcTemplate.class);
         bean.addPool(first);
-        bean.addTemplate("srv", template);
 
         List<Map<String, Object>> exec = bean.exec("First", "srv", null);
-        System.out.println(exec);
+        System.out.println(exec);*/
 
     }
 

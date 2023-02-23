@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import ru.jamsys.AbstractCoreComponent;
 
 import ru.jamsys.jdbc.template.Template;
+import ru.jamsys.jdbc.template.TemplateEnum;
 import ru.jamsys.pool.PoolJdbc;
 import ru.jamsys.pool.Pool;
 import ru.jamsys.pool.PoolAggregateStatisticData;
@@ -24,7 +25,6 @@ public class JdbcTemplate extends AbstractCoreComponent {
     private final Scheduler scheduler;
     private final StatisticAggregator statisticAggregator;
     private final Map<String, Pool<Connection>> mapPool = new ConcurrentHashMap<>();
-    private final Map<String, Template> mapTemplate = new ConcurrentHashMap<>();
 
     public JdbcTemplate(StatisticAggregator statisticAggregator, Scheduler scheduler) {
         this.scheduler = scheduler;
@@ -33,34 +33,48 @@ public class JdbcTemplate extends AbstractCoreComponent {
         scheduler.add(SchedulerGlobal.SCHEDULER_GLOBAL_STATISTIC_WRITE, this::flushStatistic);
     }
 
+    @SuppressWarnings("unused")
     public void addPool(Pool<Connection> pool) {
         mapPool.put(pool.getName(), pool);
     }
 
-    public Pool<Connection> getPool(String name) {
-        return mapPool.get(name);
-    }
-
-    public void addTemplate(String name, Template template) {
-        mapTemplate.put(name, template);
-    }
-
-    public Template getTemplate(String name) {
-        return mapTemplate.get(name);
-    }
-
-    public List<Map<String, Object>> exec(String namePool, String nameTemplate, Map<String, Object> args) throws Exception {
-        Pool<Connection> pool = getPool(namePool);
-        Template template = getTemplate(nameTemplate);
+    public List<Map<String, Object>> exec(String namePool, TemplateEnum templateEnum, Map<String, Object> args, boolean debug) throws Exception {
+        Pool<Connection> pool = mapPool.get(namePool);
+        Template template = templateEnum.getTemplate();
+        if (template == null) {
+            throw new Exception("TemplateEnum: " + templateEnum.toString() + " return null template");
+        }
         Connection res = pool.getResource();
         List<Map<String, Object>> execute = null;
+        if (debug) {
+            System.out.println(template.getSqlStatement());
+            System.out.println(args);
+        }
         try {
             execute = Template.execute(res, template, args, ((PoolJdbc) pool).getStatementControl());
             pool.complete(res, null);
         } catch (Exception e) {
+            e.printStackTrace();
             pool.complete(res, e);
         }
         return execute;
+    }
+
+    public List<Map<String, Object>> exec(String namePool, TemplateEnum templateEnum, Map<String, Object> args) throws Exception {
+        return exec(namePool, templateEnum, args, false);
+    }
+
+    @SuppressWarnings("unused")
+    public long addIfNotExist(String namePool, TemplateEnum selectSql, TemplateEnum insertSql, String idField, Map<String, Object> args) throws Exception {
+        List<Map<String, Object>> select = exec(namePool, selectSql, args);
+        Long id;
+        if (!select.isEmpty()) {
+            id = (Long) select.get(0).get(idField);
+        } else {
+            List<Map<String, Object>> insertWord = exec(namePool, insertSql, args);
+            id = (Long) insertWord.get(0).get(idField);
+        }
+        return id;
     }
 
     @Override
