@@ -1,5 +1,7 @@
 package ru.jamsys.component;
 
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ru.jamsys.AbstractCoreComponent;
@@ -21,6 +23,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @Lazy
 public class JdbcTemplate extends AbstractCoreComponent {
+
+    @Getter
+    @Value("${rjJdbcTemplate.uri:jdbc:postgresql://127.0.0.1:5432/postgres}")
+    private String uri;
+
+    @Getter
+    @Value("${rjJdbcTemplate.user:postgres}")
+    private String user;
+
+    @Getter
+    @Value("${rjJdbcTemplate.securityKey:postgresql_server}")
+    private String securityKey;
 
     final String nameSchedulerStabilizer = "SchedulerJdbcStabilizer";
     private final Scheduler scheduler;
