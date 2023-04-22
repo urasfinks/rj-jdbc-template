@@ -47,11 +47,6 @@
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.13.1" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.13.1" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.13.1" level="project" />
-    <orderEntry type="library" name="Maven: ru.jamsys:rj-statistic:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.jamsys:rj-scheduler:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.jamsys:rj-util:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.jamsys:rj-broker:1.0-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: ru.jamsys:rj-message:1.0-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.postgresql:postgresql:42.5.1" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.checkerframework:checker-qual:3.5.0" level="project" />
     <orderEntry type="library" name="Maven: ru.jamsys:rj-security:1.0-SNAPSHOT" level="project" />

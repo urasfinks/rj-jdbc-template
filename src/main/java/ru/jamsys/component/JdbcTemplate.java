@@ -76,6 +76,7 @@ public class JdbcTemplate extends AbstractCoreComponent {
         } catch (Exception e) {
             e.printStackTrace();
             pool.complete(res, e);
+            throw e;
         }
         return execute;
     }
