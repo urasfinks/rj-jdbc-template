@@ -53,7 +53,7 @@ public class PostgreSQL extends AbstractPool<Connection> implements PoolJdbc {
 
     @Override
     public boolean checkExceptionOnRemove(Exception e) {
-        if(e != null){
+        if (e != null) {
             String msg = e.getMessage();
             return msg.contains("закрыто")
                     || msg.contains("close")
