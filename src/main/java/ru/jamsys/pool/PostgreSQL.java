@@ -38,6 +38,7 @@ public class PostgreSQL extends AbstractPool<Connection> implements PoolJdbc {
 
     @Override
     public Connection createResource() {
+        System.out.println("PostgreSQL.createResource()");
         try {
             return DriverManager.getConnection(uri, user, new String(security.get(securityKey)));
         } catch (Exception e) {

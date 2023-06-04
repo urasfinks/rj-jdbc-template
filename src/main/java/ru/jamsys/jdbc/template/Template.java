@@ -98,16 +98,16 @@ public class Template {
         }
         preparedStatement.execute();
         List<Map<String, Object>> listRet = new ArrayList<>();
-        try (ResultSet resultSet = preparedStatement.getResultSet()) {
-            if (resultSet == null) {
-                return listRet;
-            }
-            Integer columnCount = null;
-            Map<Integer, String> cacheName = new HashMap<>();
-            while (resultSet.next()) {
-                Map<String, Object> row = new HashMap<>();
-                switch (template.getStatementType()) {
-                    case SELECT:
+        switch (template.getStatementType()) {
+            case SELECT:
+                try (ResultSet resultSet = preparedStatement.getResultSet()) {
+                    if (resultSet == null) {
+                        return listRet;
+                    }
+                    Integer columnCount = null;
+                    Map<Integer, String> cacheName = new HashMap<>();
+                    while (resultSet.next()) {
+                        Map<String, Object> row = new HashMap<>();
                         if (columnCount == null) {
                             ResultSetMetaData metaData = resultSet.getMetaData();
                             columnCount = metaData.getColumnCount();
@@ -121,20 +121,23 @@ public class Template {
                                 row.put(cacheName.get(i), resultSet.getObject(i));
                             }
                         }
-                        break;
-                    case CALL:
-                        for (String name : argsTemplate.keySet()) {
-                            Argument argument = argsTemplate.get(name);
-                            ArgumentDirection direction = argument.getDirection();
-                            if (direction == ArgumentDirection.OUT || direction == ArgumentDirection.IN_OUT) {
-                                row.put(name, statementControl.getOutParam((CallableStatement) preparedStatement, argument.getType(), argument.getIndex().get(0)));
-                            }
-                        }
-                        break;
+                        listRet.add(row);
+                    }
+                }
+                break;
+            case CALL:
+                Map<String, Object> row = new HashMap<>();
+                for (String name : argsTemplate.keySet()) {
+                    Argument argument = argsTemplate.get(name);
+                    ArgumentDirection direction = argument.getDirection();
+                    if (direction == ArgumentDirection.OUT || direction == ArgumentDirection.IN_OUT) {
+                        row.put(name, statementControl.getOutParam((CallableStatement) preparedStatement, argument.getType(), argument.getIndex().get(0)));
+                    }
                 }
                 listRet.add(row);
-            }
+                break;
         }
+
         return listRet;
     }
 
