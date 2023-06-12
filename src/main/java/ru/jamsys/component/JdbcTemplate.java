@@ -62,10 +62,10 @@ public class JdbcTemplate extends AbstractCoreComponent {
         Pool<Connection> pool = mapPool.get(namePool);
         Template template = templateEnum.getTemplate();
         if (template == null) {
-            throw new Exception("TemplateEnum: " + templateEnum.toString() + " return null template");
+            throw new Exception("TemplateEnum: " + templateEnum + " return null template");
         }
         Connection res = pool.getResource();
-        List<Map<String, Object>> execute = null;
+        List<Map<String, Object>> execute;
         if (debug) {
             System.out.println(template.getSqlStatement());
             System.out.println(args);
