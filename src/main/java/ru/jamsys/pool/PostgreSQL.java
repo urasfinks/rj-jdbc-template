@@ -58,6 +58,7 @@ public class PostgreSQL extends AbstractPool<Connection> implements PoolJdbc {
             String msg = e.getMessage();
             return msg.contains("закрыто")
                     || msg.contains("close")
+                    || msg.contains("Connection reset")
                     || msg.contains("Ошибка ввода/вывода при отправке бэкенду");
         }
         return false;
