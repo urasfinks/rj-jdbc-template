@@ -19,6 +19,8 @@ public class PostgreSQL extends AbstractPool<Connection> implements PoolJdbc {
     private String securityKey = "";
     @Setter
     private Security security;
+    @Setter
+    private boolean autoCommit = true;
 
     @Getter
     private final StatementControl statementControl = new DefaultStatementControl();
@@ -28,19 +30,22 @@ public class PostgreSQL extends AbstractPool<Connection> implements PoolJdbc {
     }
 
     @SuppressWarnings("unused")
-    public void initial(String uri, String user, Security security, String securityKey) {
+    public void initial(String uri, String user, boolean autoCommit, Security security, String securityKey) {
         this.uri = uri;
         this.user = user;
         this.security = security;
         this.securityKey = securityKey;
+        this.autoCommit = autoCommit;
         super.initial();
     }
 
     @Override
     public Connection createResource() {
-        System.out.println("PostgreSQL.createResource()");
+        //System.out.println("PostgreSQL.createResource() SET_AUTO_COMMIT: " + autoCommit);
         try {
-            return DriverManager.getConnection(uri, user, new String(security.get(securityKey)));
+            Connection connection = DriverManager.getConnection(uri, user, new String(security.get(securityKey)));
+            connection.setAutoCommit(autoCommit);
+            return connection;
         } catch (Exception e) {
             e.printStackTrace();
         }
