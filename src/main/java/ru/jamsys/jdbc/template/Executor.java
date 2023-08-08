@@ -21,6 +21,9 @@ public class Executor {
         this.pool = pool;
         this.conn = pool.getResource();
         this.jdbcTemplate = jdbcTemplate;
+        if (this.conn == null) {
+            throw new RuntimeException("При инициализации Executor вернулся пустой коннект");
+        }
     }
 
     public void close() throws Exception {

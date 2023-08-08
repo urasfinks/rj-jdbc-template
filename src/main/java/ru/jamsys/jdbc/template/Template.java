@@ -62,7 +62,7 @@ public class Template {
     public void analyze() throws Exception {
         for (String name : args.keySet()) {
             Argument argument = args.get(name);
-            if (statementType == StatementType.SELECT
+            if (statementType.isSelect()
                     && (
                     argument.getDirection() == ArgumentDirection.OUT
                             || argument.getDirection() == ArgumentDirection.IN_OUT
@@ -74,9 +74,9 @@ public class Template {
 
     public static List<Map<String, Object>> execute(Connection conn, Template template, Map<String, Object> args, StatementControl statementControl) throws Exception {
         StatementType statementType = template.getStatementType();
-        conn.setAutoCommit(statementType == StatementType.CALL || statementType == StatementType.SELECT);
+        conn.setAutoCommit(statementType.isAutoCommit());
         PreparedStatement preparedStatement =
-                statementType == StatementType.SELECT
+                statementType.isSelect()
                         ? conn.prepareStatement(template.getSqlStatement())
                         : conn.prepareCall(template.getSqlStatement());
 
@@ -101,7 +101,8 @@ public class Template {
         preparedStatement.execute();
         List<Map<String, Object>> listRet = new ArrayList<>();
         switch (template.getStatementType()) {
-            case SELECT:
+            case SELECT_WITHOUT_AUTO_COMMIT:
+            case SELECT_WITH_AUTO_COMMIT:
                 try (ResultSet resultSet = preparedStatement.getResultSet()) {
                     if (resultSet == null) {
                         return listRet;
@@ -127,7 +128,8 @@ public class Template {
                     }
                 }
                 break;
-            case CALL:
+            case CALL_WITHOUT_AUTO_COMMIT:
+            case CALL_WITH_AUTO_COMMIT:
                 Map<String, Object> row = new HashMap<>();
                 for (String name : argsTemplate.keySet()) {
                     Argument argument = argsTemplate.get(name);
