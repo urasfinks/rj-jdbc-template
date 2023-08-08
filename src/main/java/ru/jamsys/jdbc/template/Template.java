@@ -73,8 +73,10 @@ public class Template {
     }
 
     public static List<Map<String, Object>> execute(Connection conn, Template template, Map<String, Object> args, StatementControl statementControl) throws Exception {
+        StatementType statementType = template.getStatementType();
+        conn.setAutoCommit(statementType == StatementType.CALL || statementType == StatementType.SELECT);
         PreparedStatement preparedStatement =
-                template.getStatementType() == StatementType.SELECT
+                statementType == StatementType.SELECT
                         ? conn.prepareStatement(template.getSqlStatement())
                         : conn.prepareCall(template.getSqlStatement());
 
