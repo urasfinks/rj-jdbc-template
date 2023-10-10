@@ -23,15 +23,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class JdbcTemplate extends AbstractCoreComponent {
 
     @Getter
-    @Value("${rjJdbcTemplate.uri:jdbc:postgresql://127.0.0.1:5432/postgres}")
+    @Value("${rj.jdbcTemplate.uri:jdbc:postgresql://127.0.0.1:5432/postgres}")
     private String uri;
 
     @Getter
-    @Value("${rjJdbcTemplate.user:postgres}")
+    @Value("${rj.jdbcTemplate.user:postgres}")
     private String user;
 
     @Getter
-    @Value("${rjJdbcTemplate.securityKey:postgresql_server}")
+    @Value("${rj.jdbcTemplate.securityKey:postgresql_server}")
     private String securityKey;
 
     final String nameSchedulerStabilizer = "SchedulerJdbcStabilizer";
