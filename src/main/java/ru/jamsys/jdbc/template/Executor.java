@@ -26,6 +26,7 @@ public class Executor {
         }
     }
 
+    @SuppressWarnings("unused")
     public void close() throws Exception {
         if (error != null) {
             throw error;
@@ -33,10 +34,12 @@ public class Executor {
         pool.complete(conn, null);
     }
 
+    @SuppressWarnings("unused")
     public boolean isSuccess() {
         return error == null;
     }
 
+    @SuppressWarnings("unused")
     public List<Map<String, Object>> execute(TemplateEnum templateEnum, Map<String, Object> args) throws Exception {
         return execute(templateEnum, args, false);
     }

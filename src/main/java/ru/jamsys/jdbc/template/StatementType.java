@@ -14,6 +14,7 @@ public enum StatementType {
         return this == StatementType.SELECT_WITH_AUTO_COMMIT || this == StatementType.SELECT_WITHOUT_AUTO_COMMIT;
     }
 
+    @SuppressWarnings("unused")
     public boolean isCall() {
         return this == StatementType.CALL_WITH_AUTO_COMMIT || this == StatementType.CALL_WITHOUT_AUTO_COMMIT;
     }

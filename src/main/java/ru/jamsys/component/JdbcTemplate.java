@@ -56,6 +56,7 @@ public class JdbcTemplate extends AbstractCoreComponent {
         return new HashMap<>();
     }
 
+    @SuppressWarnings("unused")
     public Executor getExecutor(String namePool) throws Exception {
         return new Executor(mapPool.get(namePool), this);
     }
@@ -73,12 +74,8 @@ public class JdbcTemplate extends AbstractCoreComponent {
             throw new Exception("TemplateEnum: " + templateEnum + " return null template");
         }
         List<Map<String, Object>> execute;
-        if (debug) {
-            System.out.println(template.getSqlStatement());
-            System.out.println(args);
-        }
         try {
-            execute = Template.execute(res, template, args, ((PoolJdbc) pool).getStatementControl());
+            execute = Template.execute(res, template, args, ((PoolJdbc) pool).getStatementControl() ,debug);
             if (controlPool) {
                 pool.complete(res, null);
             }

@@ -1,6 +1,7 @@
 package ru.jamsys.jdbc.template;
 
 import lombok.Data;
+import ru.jamsys.template.TemplateItem;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,57 +12,45 @@ import java.util.Map;
 @Data
 public class Template {
 
-    private String sqlStatement;
-    private Map<String, Argument> args = new HashMap<>();
+    private String cachedSql;
     private final StatementType statementType;
+    private boolean dynamicArgument = false;
+    private List<TemplateItem> listTemplateItem;
+    private List<Argument> listArgument;
 
     public Template(String sql, StatementType statementType) throws Exception {
         this.statementType = statementType;
         parseSql(sql);
     }
 
+    public String getSql() {
+        try {
+            CompiledSqlTemplate compiledSqlTemplate = compileSqlTemplate(new HashMap<>());
+            return compiledSqlTemplate.getSql();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public void parseSql(String sql) throws Exception {
-        String[] exp = sql.split("\\$\\{");
-        int idx = 1;
-        for (String exp_item : exp) {
-            if (!exp_item.contains("}")) {
-                continue;
-            }
-            String[] exp2 = exp_item.split("}");
-            if (exp2.length <= 0) {
-                continue;
-            }
-            if (args.containsKey(exp2[0])) {
-                args.get(exp2[0]).getIndex().add(idx++);
-                sql = sql.replace("${" + exp2[0] + "}", "?");
-                continue;
-            }
-            String[] option = exp2[0].split("::");
-            if (option.length == 1) {
-                throw new Exception("Не достаточно описания для " + exp2[0] + "; Должно быть ${direction.var::type}");
-            }
-
-            String[] names = option[0].split("\\.");
-            String direction = names[0];
-            String name = names[1];
-            String type = option[1];
-
-            if (!args.containsKey(name)) {
+        listTemplateItem = ru.jamsys.template.Template.getParsedTemplate(sql);
+        listArgument = new ArrayList<>();
+        for (TemplateItem templateItem : listTemplateItem) {
+            if (!templateItem.isStatic) {
                 Argument argument = new Argument();
-                argument.setDirection(ArgumentDirection.valueOf(direction));
-                argument.setType(ArgumentType.valueOf(type));
-                args.put(name, argument);
+                argument.parseSqlKey(templateItem.value);
+                listArgument.add(argument);
+                if (argument.getType().isDynamicFragment()) {
+                    dynamicArgument = true;
+                }
             }
-            args.get(name).getIndex().add(idx++);
-            sql = sql.replace("${" + exp2[0] + "}", "?");
         }
         analyze();
-        sqlStatement = sql;
     }
 
     public void analyze() throws Exception {
-        for (String name : args.keySet()) {
-            Argument argument = args.get(name);
+        for (Argument argument : listArgument) {
             if (statementType.isSelect()
                     && (
                     argument.getDirection() == ArgumentDirection.OUT
@@ -72,31 +61,103 @@ public class Template {
         }
     }
 
-    public static List<Map<String, Object>> execute(Connection conn, Template template, Map<String, Object> args, StatementControl statementControl) throws Exception {
+    @SuppressWarnings("unused")
+    public static void setParam(
+            StatementControl statementControl,
+            Connection conn,
+            PreparedStatement preparedStatement,
+            Argument arg
+    ) throws Exception {
+        switch (arg.getDirection()) {
+            case IN ->
+                    statementControl.setInParam(conn, preparedStatement, arg.getType(), arg.getIndex(), arg.getValue());
+            case OUT ->
+                    statementControl.setOutParam((CallableStatement) preparedStatement, arg.getType(), arg.getIndex());
+            case IN_OUT -> {
+                statementControl.setOutParam((CallableStatement) preparedStatement, arg.getType(), arg.getIndex());
+                statementControl.setInParam(conn, preparedStatement, arg.getType(), arg.getIndex(), arg.getValue());
+            }
+        }
+    }
+
+    public CompiledSqlTemplate compileSqlTemplate(Map<String, Object> args) throws CloneNotSupportedException {
+        CompiledSqlTemplate compiledSqlTemplate = new CompiledSqlTemplate();
+        Map<String, String> templateArgs = new HashMap<>();
+        int newIndex = 1;
+        for (Argument argument : listArgument) {
+            ArgumentType argumentType = argument.getType();
+            Object argumentValue = args.get(argument.getKey());
+            List<Argument> resultListArgument = compiledSqlTemplate.getListArgument();
+            if (argumentType.isDynamicFragment()) {
+                templateArgs.put(
+                        argument.getSqlKeyTemplate(),
+                        argumentType.compileDynamicFragment(argumentValue, argument.key)
+                );
+                for (Object obj : (List) argumentValue) {
+                    Argument clone = argument.clone();
+                    clone.setValue(obj);
+                    clone.setIndex(newIndex++);
+                    clone.setType(clone.getType().getRealType());
+                    resultListArgument.add(clone);
+                }
+            } else {
+                templateArgs.put(argument.getSqlKeyTemplate(), "?");
+                Argument clone = argument.clone();
+                clone.setValue(argumentValue);
+                clone.setIndex(newIndex++);
+                resultListArgument.add(clone);
+            }
+        }
+        if (cachedSql == null && !dynamicArgument) {
+            cachedSql = ru.jamsys.template.Template.template(listTemplateItem, templateArgs);
+        }
+        if (dynamicArgument) {
+            compiledSqlTemplate.setSql(ru.jamsys.template.Template.template(listTemplateItem, templateArgs));
+        } else {
+            compiledSqlTemplate.setSql(cachedSql);
+        }
+        return compiledSqlTemplate;
+    }
+
+    public String debugSql(CompiledSqlTemplate compiledSqlTemplate) {
+        String[] split = compiledSqlTemplate.getSql().split("\\?");
+        StringBuilder sb = new StringBuilder();
+        List<Argument> listArgument = compiledSqlTemplate.getListArgument();
+        for (int i = 0; i < split.length; i++) {
+            sb.append(split[i]);
+            try {
+                Argument argument = listArgument.get(i);
+                String value = argument.getValue().toString();
+                if (argument.type.isString()) {
+                    value = "'" + value + "'";
+                }
+                sb.append(value);
+            } catch (Exception e) {
+            }
+        }
+        return sb.toString();
+    }
+
+    public static List<Map<String, Object>> execute(
+            Connection conn,
+            Template template,
+            Map<String, Object> args,
+            StatementControl statementControl,
+            boolean debug
+    ) throws Exception {
+        CompiledSqlTemplate compiledSqlTemplate = template.compileSqlTemplate(args);
+        if (debug) {
+            System.out.println(compiledSqlTemplate.getSql());
+            System.out.println(template.debugSql(compiledSqlTemplate));
+        }
         StatementType statementType = template.getStatementType();
         conn.setAutoCommit(statementType.isAutoCommit());
         PreparedStatement preparedStatement =
                 statementType.isSelect()
-                        ? conn.prepareStatement(template.getSqlStatement())
-                        : conn.prepareCall(template.getSqlStatement());
-
-        Map<String, Argument> argsTemplate = template.getArgs();
-        for (String name : argsTemplate.keySet()) {
-            Argument argument = argsTemplate.get(name);
-            for (Integer index : argument.getIndex()) {
-                switch (argument.getDirection()) {
-                    case IN:
-                        statementControl.setInParam(conn, preparedStatement, argument.getType(), index, args.get(name));
-                        break;
-                    case OUT:
-                        statementControl.setOutParam((CallableStatement) preparedStatement, argument.getType(), index);
-                        break;
-                    case IN_OUT:
-                        statementControl.setOutParam((CallableStatement) preparedStatement, argument.getType(), index);
-                        statementControl.setInParam(conn, preparedStatement, argument.getType(), index, args.get(name));
-                        break;
-                }
-            }
+                        ? conn.prepareStatement(compiledSqlTemplate.getSql())
+                        : conn.prepareCall(compiledSqlTemplate.getSql());
+        for (Argument argument : compiledSqlTemplate.getListArgument()) {
+            setParam(statementControl, conn, preparedStatement, argument);
         }
         preparedStatement.execute();
         List<Map<String, Object>> listRet = new ArrayList<>();
@@ -131,17 +192,21 @@ public class Template {
             case CALL_WITHOUT_AUTO_COMMIT:
             case CALL_WITH_AUTO_COMMIT:
                 Map<String, Object> row = new HashMap<>();
-                for (String name : argsTemplate.keySet()) {
-                    Argument argument = argsTemplate.get(name);
+                for (Argument argument : template.listArgument) {
                     ArgumentDirection direction = argument.getDirection();
                     if (direction == ArgumentDirection.OUT || direction == ArgumentDirection.IN_OUT) {
-                        row.put(name, statementControl.getOutParam((CallableStatement) preparedStatement, argument.getType(), argument.getIndex().get(0)));
+                        row.put(
+                                argument.getKey(),
+                                statementControl.getOutParam(
+                                        (CallableStatement) preparedStatement,
+                                        argument.getType(),
+                                        argument.getIndex())
+                        );
                     }
                 }
                 listRet.add(row);
                 break;
         }
-
         return listRet;
     }
 
