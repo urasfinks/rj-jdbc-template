@@ -127,11 +127,14 @@ public class Template {
             sb.append(split[i]);
             try {
                 Argument argument = listArgument.get(i);
-                String value = argument.getValue().toString();
-                if (argument.type.isString()) {
+                Object value = argument.getValue();
+                if (argument.type.isString() && value != null) {
                     value = "'" + value + "'";
                 }
-                sb.append(value);
+                if (argument.direction == ArgumentDirection.OUT) {
+                    value = "${OUT}";
+                }
+                sb.append(value == null ? "null" : value);
             } catch (Exception e) {
             }
         }
@@ -192,7 +195,7 @@ public class Template {
             case CALL_WITHOUT_AUTO_COMMIT:
             case CALL_WITH_AUTO_COMMIT:
                 Map<String, Object> row = new HashMap<>();
-                for (Argument argument : template.listArgument) {
+                for (Argument argument : compiledSqlTemplate.getListArgument()) {
                     ArgumentDirection direction = argument.getDirection();
                     if (direction == ArgumentDirection.OUT || direction == ArgumentDirection.IN_OUT) {
                         row.put(
